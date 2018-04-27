@@ -15,16 +15,22 @@ class Neural_Network(object):
  
         self.input_layer_size = 16
         self.output_layer_size = 4
-        self.hidden_layer_size = 8
- 
+        self.hidden_layer_sizes = [8]
+
+        self.W = []
         if weights_list:
-            self.W1 = weights_list[0]
-            self.W2 = weights_list[1]
+            if len(weights_list) != len(self.hidden_layer_sizes) + 1:
+                assert False, "Weights list's lenght should be %s, not %s" % (len(self.hidden_layer_sizes) + 1, len(weights_list))
+            for weight in weights_list:
+                self.W.append(weight)
         else:
-            self.W1 = np.random.randn(self.input_layer_size,self.hidden_layer_size)
-            self.W2 = np.random.randn(self.hidden_layer_size,self.output_layer_size)
- 
-        self.weights = [self.W1,self.W2]
+            self.W.append(np.random.randn(self.input_layer_size,self.hidden_layer_sizes[0]))
+            for weight_index in range(1, len(self.hidden_layer_sizes)):
+                self.W.append(np.random.randn(self.hidden_layer_sizes[weight_index-1], self.hidden_layer_sizes[weight_index]))
+            self.W.append(np.random.randn(self.hidden_layer_sizes[-1],self.output_layer_size))
+
+        self.weights = []
+        self.weights.extend(self.W)
  
         if chromosome:
             self.decode_chromosome(chromosome)
@@ -37,10 +43,13 @@ class Neural_Network(object):
  
     def forward(self,X):
         #propagate inputs through network
-        self.z2 = np.dot(X,self.W1)
-        self.a2 = self.activation(self.z2)
-        self.z3 = np.dot(self.z2, self.W2)
-        result = self.activation(self.z3)
+        self.z = []
+        self.a = []
+        self.z.append(np.dot(X, self.W[0]))
+        for index in range(1, len(self.hidden_layer_sizes)+1):
+            self.a.append(self.activation(self.z[index-1]))
+            self.z.append(np.dot(X,self.W[index]))
+        result = self.activation(self.z[-1])
         return result > .5
  
     def activation(self,z):
@@ -71,8 +80,8 @@ class Neural_Network(object):
                 new_weight_list.append(new_row)
             new_weights.append(new_weight_list)
         self.weights = new_weights
-        self.W1 = self.weights[0]
-        self.W2 = self.weights[1]
+        for weight_index in range(len(self.weights)-1):
+            self.W[weight_index] = self.weights[weight_index]
     
     @staticmethod
     def weighted_choice(choices):
